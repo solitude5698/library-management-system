@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>图书管理系统</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        .login-box { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .login-box input { width: 100%; padding: 10px; margin: 5px 0 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .nav { background: #007bff; padding: 10px; color: white; display: flex; gap: 15px; flex-wrap: wrap; }
+        .nav a { color: white; text-decoration: none; padding: 5px 10px; cursor: pointer; }
+        .nav a:hover { background: #0056b3; border-radius: 4px; }
+        .panel { display: none; margin-top: 20px; }
+        .panel.active { display: block; }
+        table { width: 100%; border-collapse: collapse; }
+        table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        table th { background: #007bff; color: white; }
+        .btn { padding: 8px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .btn:hover { background: #0056b3; }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: inline-block; width: 80px; }
+        .form-group input, .form-group select { padding: 8px; width: 200px; border: 1px solid #ddd; border-radius: 4px; }
+        .msg { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .msg.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="loginPage" class="login-box">
+    <h2 style="text-align:center;">图书管理系统</h2>
+    <div id="loginMsg" class="msg hidden"></div>
+    <label>用户名</label>
+    <input type="text" id="userId" value="admin">
+    <label>密码</label>
+    <input type="password" id="password" value="admin123">
+    <button onclick="login()">登 录</button>
+</div>
+
+<div id="mainPage" style="display:none;">
+    <div class="container">
+        <div class="nav">
+            <span style="font-weight:bold;">图书管理系统</span>
+            <a onclick="showPanel('readers')">读者管理</a>
+            <a onclick="showPanel('books')">图书管理</a>
+            <a onclick="showPanel('borrow')">借书</a>
+            <a onclick="showPanel('return')">还书</a>
+            <a onclick="showPanel('stats')">统计</a>
+            <a onclick="logout()" style="margin-left:auto;">退出</a>
+        </div>
+        <div id="currentUser" style="padding:10px; color:#666;"></div>
+        <div id="msgBox" class="msg hidden"></div>
+
+        <div id="panel-readers" class="panel active">
+            <h3>读者管理</h3>
+            <button class="btn" onclick="loadReaders()">刷新</button>
+            <button class="btn" onclick="document.getElementById('readerForm').classList.toggle('hidden')">+ 添加读者</button>
+            <div id="readerForm" class="hidden" style="background:#f9f9f9; padding:15px; border-radius:4px; margin:10px 0;">
+                <h4>添加读者</h4>
+                <div class="form-group"><label>读者ID</label><input type="text" id="r_id" placeholder="R001"></div>
+                <div class="form-group"><label>姓名</label><input type="text" id="r_name"></div>
+                <div class="form-group"><label>性别</label><select id="r_gender"><option value="男">男</option><option value="女">女</option></select></div>
+                <div class="form-group"><label>类别</label><select id="r_category"><option value="undergrad">本科生</option><option value="graduate">研究生</option><option value="teacher">教师</option></select></div>
+                <div class="form-group"><label>学院</label><input type="text" id="r_dept"></div>
+                <div class="form-group"><label>电话</label><input type="text" id="r_phone"></div>
+                <button class="btn" onclick="addReader()">提交</button>
+            </div>
+            <div id="readerList"></div>
+        </div>
+
+        <div id="panel-books" class="panel">
+            <h3>图书管理</h3>
+            <button class="btn" onclick="loadBooks()">刷新</button>
+            <button class="btn" onclick="document.getElementById('bookForm').classList.toggle('hidden')">+ 添加图书</button>
+            <div id="bookForm" class="hidden" style="background:#f9f9f9; padding:15px; border-radius:4px; margin:10px 0;">
+                <h4>添加图书</h4>
+                <div class="form-group"><label>图书ID</label><input type="text" id="b_id" placeholder="B001"></div>
+                <div class="form-group"><label>书名</label><input type="text" id="b_name"></div>
+                <div class="form-group"><label>作者</label><input type="text" id="b_author"></div>
+                <div class="form-group"><label>出版社</label><input type="text" id="b_publisher"></div>
+                <div class="form-group"><label>分类</label><input type="text" id="b_category"></div>
+                <div class="form-group"><label>总数</label><input type="number" id="b_total" value="1"></div>
+                <button class="btn" onclick="addBook()">提交</button>
+            </div>
+            <div id="bookList"></div>
+        </div>
+
+        <div id="panel-borrow" class="panel">
+            <h3>借书</h3>
+            <div style="background:#f9f9f9; padding:15px; border-radius:4px;">
+                <div class="form-group"><label>读者ID</label><input type="text" id="borrow_reader_id"></div>
+                <div class="form-group"><label>图书ID</label><input type="text" id="borrow_book_id"></div>
+                <button class="btn" onclick="borrowBook()">确认借书</button>
+                <button class="btn" onclick="loadReaderBorrows()">查看当前借阅</button>
+            </div>
+            <div id="borrowResult"></div>
+            <div id="borrowList"></div>
+        </div>
+
+        <div id="panel-return" class="panel">
+            <h3>还书</h3>
+            <div style="background:#f9f9f9; padding:15px; border-radius:4px;">
+                <div class="form-group"><label>借阅流水号</label><input type="text" id="return_borrow_id"></div>
+                <button class="btn" onclick="returnBook()">确认还书</button>
+            </div>
+            <div id="returnResult"></div>
+            <button class="btn" onclick="loadOverdue()">查看超期记录</button>
+            <div id="overdueList"></div>
+        </div>
+
+        <div id="panel-stats" class="panel">
+            <h3>数据统计</h3>
+            <button class="btn" onclick="loadHotBooks()">热门图书</button>
+            <button class="btn" onclick="loadCategoryStats()">分类统计</button>
+            <button class="btn" onclick="loadBorrowTrend()">借阅趋势</button>
+            <div id="statsResult"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let token = null;
+
+function showMsg(msg, type) {
+    const box = document.getElementById('msgBox');
+    box.classList.remove('hidden', 'success', 'error');
+    box.classList.add(type);
+    box.textContent = msg;
+    setTimeout(() => { box.classList.add('hidden'); }, 3000);
+}
+
+function getHeaders() {
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': token || ''
+    };
+}
+
+async function login() {
+    const userId = document.getElementById('userId').value;
+    const password = document.getElementById('password').value;
+    try {
+        const resp = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, password: password })
+        });
+        const data = await resp.json();
+        if (data.code === 200) {
+            token = data.data.token;
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainPage').style.display = 'block';
+            document.getElementById('currentUser').textContent = '当前用户: ' + data.data.user_id + ' (' + data.data.role + ')';
+            loadReaders();
+            loadBooks();
+        } else {
+            showMsg(data.msg, 'error');
+        }
+    } catch(e) { showMsg('登录失败', 'error'); }
+}
+
+function logout() {
+    token = null;
+    document.getElementById('mainPage').style.display = 'none';
+    document.getElementById('loginPage').style.display = 'block';
+}
+
+function showPanel(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+}
+
+async function loadReaders() {
+    try {
+        const resp = await fetch('/api/readers', { headers: getHeaders() });
+        const data = await resp.json();
+        if (data.code === 200) {
+            const container = document.getElementById('readerList');
+            if (!data.data || data.data.length === 0) {
+                container.innerHTML = '<p>暂无读者</p>';
+                return;
+            }
+            let html = '<table><tr><th>读者ID</th><th>姓名</th><th>性别</th><th>类别</th><th>学院</th><th>电话</th><th>状态</th></tr>';
+            data.data.forEach(r => {
+                html += `<tr><td>${r.reader_id}</td><td>${r.reader_name}</td><td>${r.gender || ''}</td><td>${r.category_code || ''}</td><td>${r.department || ''}</td><td>${r.phone || ''}</td><td>${r.status || ''}</td></tr>`;
+            });
+            html += '</table>';
+            container.innerHTML = html;
+        } else {
+            showMsg(data.msg || '加载失败', 'error');
+        }
+    } catch(e) { showMsg('加载读者失败', 'error'); }
+}
+
+async function addReader() {
+    const data = {
+        reader_id: document.getElementById('r_id').value,
+        reader_name: document.getElementById('r_name').value,
+        gender: document.getElementById('r_gender').value,
+        category_code: document.getElementById('r_category').value,
+        department: document.getElementById('r_dept').value,
+        phone: document.getElementById('r_phone').value
+    };
+    try {
+        const resp = await fetch('/api/readers', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        });
+        const result = await resp.json();
+        showMsg(result.msg, result.code === 200 ? 'success' : 'error');
+        if (result.code === 200) { loadReaders(); }
+    } catch(e) { showMsg('添加失败', 'error'); }
+}
+
+async function loadBooks() {
+    try {
+        const resp = await fetch('/api/books', { headers: getHeaders() });
+        const data = await resp.json();
+        if (data.code === 200) {
+            const container = document.getElementById('bookList');
+            if (!data.data || data.data.length === 0) {
+                container.innerHTML = '<p>暂无图书</p>';
+                return;
+            }
+            let html = '<table><tr><th>图书ID</th><th>书名</th><th>作者</th><th>分类</th><th>总数</th><th>剩余</th><th>位置</th></tr>';
+            data.data.forEach(b => {
+                html += `<tr><td>${b.book_id}</td><td>${b.book_name}</td><td>${b.author || ''}</td><td>${b.category || ''}</td><td>${b.total_num}</td><td>${b.remain_num}</td><td>${b.location || ''}</td></tr>`;
+            });
+            html += '</table>';
+            container.innerHTML = html;
+        } else {
+            showMsg(data.msg || '加载失败', 'error');
+        }
+    } catch(e) { showMsg('加载图书失败', 'error'); }
+}
+
+async function addBook() {
+    const data = {
+        book_id: document.getElementById('b_id').value,
+        book_name: document.getElementById('b_name').value,
+        author: document.getElementById('b_author').value,
+        publisher: document.getElementById('b_publisher').value,
+        category: document.getElementById('b_category').value,
+        total_num: parseInt(document.getElementById('b_total').value) || 1
+    };
+    try {
+        const resp = await fetch('/api/books', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        });
+        const result = await resp.json();
+        showMsg(result.msg, result.code === 200 ? 'success' : 'error');
+        if (result.code === 200) { loadBooks(); }
+    } catch(e) { showMsg('添加失败', 'error'); }
+}
+
+async function borrowBook() {
+    const reader_id = document.getElementById('borrow_reader_id').value;
+    const book_id = document.getElementById('borrow_book_id').value;
+    if (!reader_id || !book_id) { showMsg('请输入读者ID和图书ID', 'error'); return; }
+    try {
+        const resp = await fetch('/api/borrow', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ reader_id, book_id })
+        });
+        const data = await resp.json();
+        document.getElementById('borrowResult').innerHTML = `<div class="msg ${data.code === 200 ? 'success' : 'error'}">${data.msg}</div>`;
+    } catch(e) { showMsg('借书失败', 'error'); }
+}
+
+async function loadReaderBorrows() {
+    const reader_id = document.getElementById('borrow_reader_id').value;
+    if (!reader_id) { showMsg('请输入读者ID', 'error'); return; }
+    try {
+        const resp = await fetch('/api/borrow/reader/' + reader_id, { headers: getHeaders() });
+        const data = await resp.json();
+        if (data.code === 200 && data.data && data.data.length > 0) {
+            let html = '<table><tr><th>流水号</th><th>图书ID</th><th>书名</th><th>借书日期</th><th>应还日期</th><th>状态</th></tr>';
+            data.data.forEach(b => {
+                html += `<tr><td>${b.borrow_id}</td><td>${b.book_id}</td><td>${b.book_name}</td><td>${b.borrow_date}</td><td>${b.due_date}</td><td>${b.status}</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('borrowList').innerHTML = html;
+        } else {
+            document.getElementById('borrowList').innerHTML = '<p>暂无借阅记录</p>';
+        }
+    } catch(e) { showMsg('查询失败', 'error'); }
+}
+
+async function returnBook() {
+    const borrow_id = document.getElementById('return_borrow_id').value;
+    if (!borrow_id) { showMsg('请输入借阅流水号', 'error'); return; }
+    try {
+        const resp = await fetch('/api/return', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ borrow_id })
+        });
+        const data = await resp.json();
+        document.getElementById('returnResult').innerHTML = `<div class="msg ${data.code === 200 ? 'success' : 'error'}">${data.msg}</div>`;
+    } catch(e) { showMsg('还书失败', 'error'); }
+}
+
+async function loadOverdue() {
+    try {
+        const resp = await fetch('/api/return/overdue', { headers: getHeaders() });
+        const data = await resp.json();
+        if (data.code === 200 && data.data && data.data.length > 0) {
+            let html = '<table><tr><th>读者ID</th><th>读者姓名</th><th>图书ID</th><th>书名</th><th>应还日期</th><th>超期天数</th></tr>';
+            data.data.forEach(o => {
+                html += `<tr><td>${o.reader_id}</td><td>${o.reader_name}</td><td>${o.book_id}</td><td>${o.book_name}</td><td>${o.due_date}</td><td>${o.overdue_days}</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('overdueList').innerHTML = html;
+        } else {
+            document.getElementById('overdueList').innerHTML = '<p>暂无超期记录</p>';
+        }
+    } catch(e) { showMsg('加载超期记录失败', 'error'); }
+}
+
+async function loadHotBooks() {
+    try {
+        const resp = await fetch('/api/stats/hot-books?top=5', { headers: getHeaders() });
+        const data = await resp.json();
+        if (data.code === 200 && data.data) {
+            let html = '<h4>热门图书排行</h4><table><tr><th>图书ID</th><th>书名</th><th>作者</th><th>借阅次数</th></tr>';
+            data.data.forEach(b => {
+                html += `<tr><td>${b.book_id}</td><td>${b.book_name}</td><td>${b.author || ''}</td><td>${b.borrow_times}</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('statsResult').innerHTML = html;
+        }
+    } catch(e) { showMsg('加载失败', 'error'); }
+}
+
+async function loadCategoryStats() {
+    try {
+        const resp = await fetch('/api/stats/category', { headers: getHeaders() });
+        const data = await resp.json();
+        if (data.code === 200 && data.data) {
+            let html = '<h4>分类统计</h4><table><tr><th>分类</th><th>图书种数</th><th>总册数</th></tr>';
+            data.data.forEach(c => {
+                html += `<tr><td>${c.category}</td><td>${c.book_count}</td><td>${c.total_copy_count}</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('statsResult').innerHTML = html;
+        }
+    } catch(e) { showMsg('加载失败', 'error'); }
+}
+
+async function loadBorrowTrend() {
+    try {
+        const resp = await fetch('/api/stats/borrow-trend?days=30', { headers: getHeaders() });
+        const data = await resp.json();
+        if (data.code === 200 && data.data) {
+            let html = '<h4>借阅趋势（最近30天）</h4><table><tr><th>日期</th><th>借阅量</th></tr>';
+            data.data.forEach(d => {
+                html += `<tr><td>${d.date}</td><td>${d.borrow_count}</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('statsResult').innerHTML = html;
+        }
+    } catch(e) { showMsg('加载失败', 'error'); }
+}
+</script>
+</body>
+</html>
